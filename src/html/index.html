@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="vue.js"></script>
+    <title>Hello World!</title>
+</head>
+<body>
+    <div id="app">
+        <h1>{{ message }}</h1>
+        <div>
+            <button v-for="(row, i) in data" :id="row.name" :disabled="i == active_index" @click="active_index = i">{{ row.name }}</button>
+        </div>
+        <div>
+            <h3>{{ table.name }}</h3>
+            <table class="table">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+                <tr v-for="(item, index) in table.data">
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.notes }}</td>
+                    <td><button @click="editItem(index)">Edit</button><button @click="deleteItem(index)">Delete</button></td>
+                </tr>
+            </table>
+        </div>
+        <div>
+            <h2>Add Item</h2>
+            <form @submit.prevent="submitItem">
+                <label for="name">Name</label>
+                <input type="text" id="name" v-model="newItem.name">
+                <label for="quantity">Quantity</label>
+                <input type="number" id="quantity" v-model="newItem.quantity">
+                <label for="notes">Notes</label>
+                <input type="text" id="notes" v-model="newItem.notes">
+                <label for="id">ID</label>
+                <input type="text" id="id" v-model="newItem.id">
+                <button type="submit">{{ editingItem ? 'Update' : 'Add'  }}</button>
+                <button @click.prevent="clearNewItem" v-show="editingItem">Clear</button>
+            </form>
+        </div>
+
+    </div>
+    <script>
+        var fs = require('fs');
+
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: 'Hello Vue!',
+                data: {},
+                items: [],
+                table: {},
+                active_index: null,
+                newItem: {
+                    id: '',
+                    name: '',
+                    quantity: 0,
+                    notes: ''
+                },
+                editingItem: false
+            },
+            created() {
+                this.data = this.getData();
+                this.active_index = 0;
+
+            },
+            methods: {
+                getData() {
+                    return JSON.parse(fs.readFileSync('database.json', 'utf8'));
+                },
+                putData(table_index, obj) {
+                    let data = this.data[table_index].data;
+                    data.push(obj);
+                    fs.writeFileSync('database.json', JSON.stringify(this.data));
+                },
+                clearNewItem() {
+                    this.editingItem = false;
+                    this.newItem = {
+                        id: '',
+                        name: '',
+                        quantity: 0,
+                        notes: ''
+                    }
+                },
+                addItem() {
+                    this.putData(this.active_index, this.newItem);
+                    this.clearNewItem();
+
+                },
+                deleteItem(index) {
+                    let data = this.data[this.active_index].data;
+                    data.splice(index, 1);
+                    fs.writeFileSync('database.json', JSON.stringify(this.data));
+                },
+                editItem(index) {
+                    let data = this.data[this.active_index].data;
+                    this.newItem = data[index];
+                    this.editingItem = true;
+                },
+                updateItem(index) {
+                    console.log('update', index);
+                    let data = this.data[this.active_index].data;
+                    data[index] = this.newItem;
+                    fs.writeFileSync('database.json', JSON.stringify(this.data));
+                    this.clearNewItem();
+                },
+                submitItem() {
+                    if (this.editingItem) {
+                        this.updateItem();
+                    } else {
+                        this.addItem();
+                    }
+                }
+            },
+            watch: {
+                active_index: function (val) {
+                    this.table = this.data[val];
+                }
+            }
+        })
+
+    </script>
+    <style>
+        .table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid black;
+            padding: 5px;
+        }
+    </style>
+</body>
+</html>
